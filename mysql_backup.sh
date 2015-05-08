@@ -6,7 +6,7 @@ osname=`uname`
 date_today=$(date)
 script=${0}
 scriptpath=$(dirname "$script")
-logpath=$scriptpath'/backup_log.txt'
+logpath=$scriptpath'/backup.log'
 
 function HELP {
     echo "This is help"
@@ -39,6 +39,7 @@ while getopts h:u:P:p:d:H opt; do
             HELP
         esac
 done
+
 if [ -z "$username" ]; then
     echo -n 'Enter Administrative username : '
     read username
@@ -52,16 +53,13 @@ fi
 if [ -z "$password" ]; then
     echo -n 'Enter MySQL Password : '
     read -s password
-
-    if [ -z "$password" ]; then
-        echo
-    fi
+    echo
 fi
 
-if [ -z "$databases" ]; then
+while [ -z "$databases" ]; do
     echo 'Specify Database comma separated (-d) : '
     read databases
-fi
+done
 
 # Convert comma separated string to array
 IFS=', ' read -a databases <<< "$databases"
@@ -76,8 +74,23 @@ for ((i=0; i<max; i++))
 do
     started_date=$(date +'%m-%d-%y')'_'$(date +'%T')
     filename=$scriptpath'/'${databases[$i]}'_'$started_date'.sql'
-    # echo $filename
-    sudo mysqldump -h $host -u$username -p$password ${databases[$i]} > $filename
+
+    command='/usr/local/bin/mysqldump '
+
+    if [ ! -z "$host" ]; then
+        command=$command' -h'$host
+    fi
+
+    command=$command' -u'$username
+
+    if [ ! -z "$password" ]; then
+        command=$command' -p'$password
+    fi
+
+    command=$command' '${databases[$i]}
+
+    $command > $filename # put dump to file
+
     retval=$?
     echo $retval
     if [ $retval -eq 0 ]; then
